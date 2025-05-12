@@ -59,8 +59,14 @@ This will guide you through the process of setting up the worker in your Cloudfl
 
 To proxy a request, use the worker URL with the target URL as a query parameter:
 
+```
+https://<your-worker-subdomain>.workers.dev/?url=<url-to-proxy>
+```
+
+### Example (JavaScript fetch)
+
 ```javascript
-fetch('https://<your-worker-subdomain>.workers.dev/?https://httpbin.org/post', {
+fetch('https://<your-worker-subdomain>.workers.dev/?url=' + encodeURIComponent('https://httpbin.org/post'), {
 	method: 'POST',
 	headers: {
 		'x-foo': 'bar',
@@ -70,6 +76,7 @@ fetch('https://<your-worker-subdomain>.workers.dev/?https://httpbin.org/post', {
 			cookie: 'x=123',
 		}),
 	},
+	body: JSON.stringify({ hello: 'world' })
 })
 	.then((res) => {
 		// Read all received headers (including forbidden ones)
