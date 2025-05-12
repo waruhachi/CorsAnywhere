@@ -60,7 +60,7 @@ async function handleRequest(event) {
 			colo = request.cf.colo || false;
 		}
 		return new Response(
-			'CORS-ANYWHERE\n\n' +
+			'CorsAnywhere\n\n' +
 				'Source:\nhttps://github.com/waruhachi/corsanywhere\n\n' +
 				'Usage:\n' +
 				url.origin +
@@ -79,7 +79,15 @@ async function handleRequest(event) {
 		);
 	}
 
-	// Check whitelist/blacklist
+	// Enforce whitelistUrls if not empty
+	if (whitelistUrls.length > 0 && !matchesWhitelist(targetUrl, whitelistUrls)) {
+		return new Response(
+			'Target URL is not allowed by whitelist.',
+			{ status: 403, statusText: 'Forbidden' }
+		);
+	}
+
+	// Check blacklist and origin whitelist
 	if (
 		!matchesWhitelist(targetUrl, blacklistUrls) &&
 		matchesWhitelist(originHeader, whitelistOrigins)
@@ -159,7 +167,7 @@ async function handleRequest(event) {
 		// Forbidden response for non-whitelisted/blacklisted requests
 		return new Response(
 			'Create your own CORS proxy</br>\n' +
-				"<a href='https://github.com/Zibri/cloudflare-cors-anywhere'>https://github.com/Zibri/cloudflare-cors-anywhere</a></br>\n" +
+				"<a href='https://github.com/waruhachi/corsanywhere'>https://github.com/waruhachi/corsanywhere</a></br>\n" +
 				'\nDonate</br>\n' +
 				"<a href='https://paypal.me/Zibri/5'>https://paypal.me/Zibri/5</a>\n",
 			{
