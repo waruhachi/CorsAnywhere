@@ -16,6 +16,23 @@ addEventListener('fetch', (event) => {
 });
 
 /**
+ * Extracts the target URL from the query parameter 'url'
+ * @param {URL} urlObj
+ * @returns {string|null}
+ */
+function extractTargetUrl(urlObj) {
+	const param = urlObj.searchParams.get('url');
+	if (param) {
+		try {
+			return decodeURIComponent(param);
+		} catch {
+			return null;
+		}
+	}
+	return null;
+}
+
+/**
  * Handles the incoming request and returns a Response
  * @param {FetchEvent} event
  * @returns {Promise<Response>}
@@ -24,11 +41,43 @@ async function handleRequest(event) {
 	const request = event.request;
 	const isPreflight = request.method === 'OPTIONS';
 	const url = new URL(request.url);
-	const targetUrl = decodeURIComponent(
-		decodeURIComponent(url.search.substr(1))
-	);
+	const targetUrl = extractTargetUrl(url);
 	const originHeader = request.headers.get('Origin');
 	const connectingIp = request.headers.get('CF-Connecting-IP');
+
+	// If no ?url= param, show info page
+	if (!targetUrl) {
+		let responseHeaders = new Headers();
+		responseHeaders = setupCORSHeaders(
+			responseHeaders,
+			request,
+			isPreflight
+		);
+		let country = false;
+		let colo = false;
+		if (typeof request.cf !== 'undefined') {
+			country = request.cf.country || false;
+			colo = request.cf.colo || false;
+		}
+		return new Response(
+			'CORS-ANYWHERE\n\n' +
+				'Source:\nhttps://github.com/waruhachi/corsanywhere\n\n' +
+				'Usage:\n' +
+				url.origin +
+				'/?url=<url>\n\n' +
+				(originHeader ? 'Origin: ' + originHeader + '\n' : '') +
+				'IP: ' +
+				connectingIp +
+				'\n' +
+				(country ? 'Country: ' + country + '\n' : '') +
+				(colo ? 'Datacenter: ' + colo + '\n' : '') +
+				'\n',
+			{
+				status: 200,
+				headers: responseHeaders,
+			}
+		);
+	}
 
 	// Check whitelist/blacklist
 	if (
@@ -45,105 +94,67 @@ async function handleRequest(event) {
 			}
 		}
 
-		// Proxy request if a target URL is provided
-		if (url.search.startsWith('?')) {
-			// Filter headers for the proxied request
-			const filteredHeaders = {};
-			for (const [key, value] of request.headers.entries()) {
-				if (
-					!/^origin/i.test(key) &&
-					!/eferer/i.test(key) &&
-					!/^cf-/i.test(key) &&
-					!/^x-forw/i.test(key) &&
-					!/^x-cors-headers/i.test(key)
-				) {
-					filteredHeaders[key] = value;
-				}
+		// Filter headers for the proxied request
+		const filteredHeaders = {};
+		for (const [key, value] of request.headers.entries()) {
+			if (
+				!/^origin/i.test(key) &&
+				!/eferer/i.test(key) &&
+				!/^cf-/i.test(key) &&
+				!/^x-forw/i.test(key) &&
+				!/^x-cors-headers/i.test(key)
+			) {
+				filteredHeaders[key] = value;
 			}
-			// Add custom headers if provided
-			if (customHeaders) {
-				Object.entries(customHeaders).forEach(
-					([k, v]) => (filteredHeaders[k] = v)
-				);
-			}
-			// Perform the proxied fetch
-			let response;
-			try {
-				const newRequest = new Request(request, {
-					redirect: 'follow',
-					headers: filteredHeaders,
-				});
-				response = await fetch(targetUrl, newRequest);
-			} catch (err) {
-				return new Response(
-					'Error fetching target URL: ' + err.message,
-					{ status: 502 }
-				);
-			}
-			// Prepare response headers
-			let responseHeaders = new Headers(response.headers);
-			const exposedHeaders = [];
-			const allResponseHeaders = {};
-			for (const [key, value] of response.headers.entries()) {
-				exposedHeaders.push(key);
-				allResponseHeaders[key] = value;
-			}
-			exposedHeaders.push('cors-received-headers');
-			responseHeaders = setupCORSHeaders(
-				responseHeaders,
-				request,
-				isPreflight
-			);
-			responseHeaders.set(
-				'Access-Control-Expose-Headers',
-				exposedHeaders.join(',')
-			);
-			responseHeaders.set(
-				'cors-received-headers',
-				JSON.stringify(allResponseHeaders)
-			);
-			// Return proxied response
-			const responseBody = isPreflight
-				? null
-				: await response.arrayBuffer();
-			return new Response(responseBody, {
-				headers: responseHeaders,
-				status: isPreflight ? 200 : response.status,
-				statusText: isPreflight ? 'OK' : response.statusText,
-			});
-		} else {
-			// Info page if no target URL is provided
-			let responseHeaders = new Headers();
-			responseHeaders = setupCORSHeaders(
-				responseHeaders,
-				request,
-				isPreflight
-			);
-			let country = false;
-			let colo = false;
-			if (typeof request.cf !== 'undefined') {
-				country = request.cf.country || false;
-				colo = request.cf.colo || false;
-			}
-			return new Response(
-				'CORS-ANYWHERE\n\n' +
-					'Source:\nhttps://github.com/waruhachi/corsanywhere\n\n' +
-					(originHeader ? 'Origin: ' + originHeader + '\n' : '') +
-					'IP: ' +
-					connectingIp +
-					'\n' +
-					(country ? 'Country: ' + country + '\n' : '') +
-					(colo ? 'Datacenter: ' + colo + '\n' : '') +
-					'\n' +
-					(customHeaders
-						? '\nx-cors-headers: ' + JSON.stringify(customHeaders)
-						: ''),
-				{
-					status: 200,
-					headers: responseHeaders,
-				}
+		}
+		// Add custom headers if provided
+		if (customHeaders) {
+			Object.entries(customHeaders).forEach(
+				([k, v]) => (filteredHeaders[k] = v)
 			);
 		}
+		// Perform the proxied fetch
+		let response;
+		try {
+			const newRequest = new Request(request, {
+				redirect: 'follow',
+				headers: filteredHeaders,
+			});
+			response = await fetch(targetUrl, newRequest);
+		} catch (err) {
+			return new Response('Error fetching target URL: ' + err.message, {
+				status: 502,
+			});
+		}
+		// Prepare response headers
+		let responseHeaders = new Headers(response.headers);
+		const exposedHeaders = [];
+		const allResponseHeaders = {};
+		for (const [key, value] of response.headers.entries()) {
+			exposedHeaders.push(key);
+			allResponseHeaders[key] = value;
+		}
+		exposedHeaders.push('cors-received-headers');
+		responseHeaders = setupCORSHeaders(
+			responseHeaders,
+			request,
+			isPreflight
+		);
+		responseHeaders.set(
+			'Access-Control-Expose-Headers',
+			exposedHeaders.join(',')
+		);
+		responseHeaders.set(
+			'cors-received-headers',
+			JSON.stringify(allResponseHeaders)
+		);
+		// Return proxied response
+		const responseBody = isPreflight ? null : await response.arrayBuffer();
+		return new Response(responseBody, {
+			headers: responseHeaders,
+			status: isPreflight ? 200 : response.status,
+			statusText: isPreflight ? 'OK' : response.statusText,
+		});
 	} else {
 		// Forbidden response for non-whitelisted/blacklisted requests
 		return new Response(
