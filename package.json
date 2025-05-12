@@ -1,22 +1,33 @@
 {
-    "name": "{{ project-name }}",
-    "version": "1.0.0",
-    "description": "A CORS proxy running in a worker",
-    "main": "index.js",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "format": "prettier --write '**/*.{js,css,json,md}'"
-    },
-    "author": "{{ authors }}",
-    "license": "MIT",
-    "devDependencies": {
-        "husky": "^2.1.0",
-        "prettier": "^1.17.0"
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "npm run format",
-            "pre-push": "npm run format"
-        }
-    }
+	"name": "corsanywhere",
+	"version": "1.0.0",
+	"description": "A CORS proxy running in a Cloudflare worker",
+	"main": "src/index.js",
+	"scripts": {
+		"dev": "bunx wrangler dev",
+		"format": "prettier --write '**/*.{js,css,json,md}'",
+		"deploy": "bun run format && bunx wrangler deploy"
+	},
+	"author": "waruhachi",
+	"license": "MIT",
+	"devDependencies": {
+		"husky": "^2.1.0",
+		"prettier": "^1.17.0"
+	},
+	"husky": {
+		"hooks": {
+			"pre-commit": "bun run format",
+			"pre-push": "bun run format"
+		}
+	},
+	"prettier": {
+		"arrowParens": "always",
+		"bracketSpacing": true,
+		"singleQuote": true,
+		"printWidth": 80,
+		"semi": true,
+		"tabWidth": 4,
+		"useTabs": true,
+		"trailingComma": "es5"
+	}
 }

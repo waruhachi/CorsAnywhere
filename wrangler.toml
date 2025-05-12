@@ -1,3 +1,3 @@
-name = "cloudflare-cors-anywhere"
-main = "index.js"
+name = "corsanywhere"
+main = "src/index.js"
 compatibility_date = "2023-04-17"

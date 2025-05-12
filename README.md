@@ -1,60 +1,98 @@
-# cloudflare-cors-anywhere
-Cloudflare CORS proxy in a worker.
+# CorsAnywhere
 
-CLOUDFLARE-CORS-ANYWHERE
+A simple, scalable CORS proxy running on [Cloudflare Workers](https://workers.cloudflare.com/).  
+Easily bypass CORS restrictions for client-side web applications by proxying requests through this worker.
 
-Source:
-https://github.com/Zibri/cloudflare-cors-anywhere
+---
 
-Demo:
-https://test.cors.workers.dev
+## Features
 
-Donate:
-https://paypal.me/Zibri/5
+-   Proxy any HTTP request and bypass CORS restrictions
+-   Supports all HTTP methods (GET, POST, etc.)
+-   Allows sending and receiving forbidden headers (e.g., `set-cookie`)
+-   Returns all received headers in a special response header
 
-Post:
-http://www.zibri.org/2019/07/your-own-cors-anywhere-proxy-on.html
+---
+
+## Prerequisites
+
+-   [Bun](https://bun.sh/) (for local development)
+-   [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
+-   [Cloudflare account](https://dash.cloudflare.com/)
+
+---
 
 ## Deployment
 
-This project is written in [Cloudfalre Workers](https://workers.cloudflare.com/), and can be easily deployed with [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/).
+1. Install Wrangler CLI:
 
-```bash
-wrangler publish
-```
+    ```bash
+    bun install -g wrangler
+    ```
 
-## Usage Example
+2. Authenticate with Cloudflare:
+
+    ```bash
+    wrangler login
+    ```
+
+3. Deploy the worker:
+    ```bash
+    wrangler deploy
+    ```
+
+---
+
+## Usage
+
+To proxy a request, use the worker URL with the target URL as a query parameter:
 
 ```javascript
-fetch('https://test.cors.workers.dev/?https://httpbin.org/post', {
-  method: 'post',
-  headers: {
-    'x-foo': 'bar',
-    'x-bar': 'foo',
-    'x-cors-headers': JSON.stringify({
-      // allows to send forbidden headers
-      // https://developer.mozilla.org/en-US/docs/Glossary/Forbidden_header_name
-      'cookies': 'x=123'
-    }) 
-  }
-}).then(res => {
-  // allows to read all headers (even forbidden headers like set-cookies)
-  const headers = JSON.parse(res.headers.get('cors-received-headers'))
-  console.log(headers)
-  return res.json()
-}).then(console.log)
+fetch('https://<your-worker-subdomain>.workers.dev/?https://httpbin.org/post', {
+	method: 'POST',
+	headers: {
+		'x-foo': 'bar',
+		'x-bar': 'foo',
+		'x-cors-headers': JSON.stringify({
+			// Allows sending forbidden headers
+			cookie: 'x=123',
+		}),
+	},
+})
+	.then((res) => {
+		// Read all received headers (including forbidden ones)
+		const headers = JSON.parse(res.headers.get('cors-received-headers'));
+		console.log(headers);
+		return res.json();
+	})
+	.then(console.log);
 ```
 
-Note:
+**Note:**  
+All received headers are returned in the `cors-received-headers` response header as a JSON string.
 
-All received headers are also returned in "cors-received-headers" header.
+---
 
-Note about the DEMO url:
+## Configuration
 
-Abuse (other than testing) of the demo will result in a ban.  
-The demo accepts only fetch and xmlhttprequest.  
+-   Customize your worker by editing `wrangler.toml` and `index.js`.
+-   For advanced configuration, see the [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/).
 
-To create your own is very easy, you just need to set up a cloudflare account and upload the worker code.  
+---
 
-My personal thanks to Damien Collis for his generous and unique donation.    
+## Security & Limitations
 
+-   This proxy is public by default. Consider adding authentication or rate limiting for production use.
+-   Some headers or methods may still be restricted by Cloudflare or browser policies.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open issues or submit pull requests.
+
+---
+
+## License
+
+[MIT](LICENSE)
