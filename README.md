@@ -24,6 +24,18 @@ Easily bypass CORS restrictions for client-side web applications by proxying req
 
 ## Deployment
 
+### Automatic (One-Click Deploy)
+
+You can deploy your own instance to Cloudflare Workers with a single click:
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/waruhachi/corsanywhere)
+
+This will guide you through the process of setting up the worker in your Cloudflare account automatically.
+
+---
+
+### Manual Method
+
 1. Install Wrangler CLI:
 
     ```bash
